@@ -3,10 +3,10 @@
 This app implements a bolt reverse proxy.  It:
 * Listens on a configurable port for websocket requests.
 * Consumes the bolt messages, unpacks them, and logs all messages.
-* Modifies all Bolt LOGON requests to add a configurable set of parameters to the AuthToken (custom token)
+* Proxies http discovery requests to Neo4j.
+* Modifies all Bolt LOGON requests to add a configurable set of parameters to the AuthToken (custom token).  Requires a custom AZ plugin on Neo4j to read them.
 
 ## Setup
-
 * Configure the boltproxy.conf file on the classpath
 * Install the neo4j-bolt-utils jar manually into your repo.
 ```
@@ -26,4 +26,6 @@ mvn install:install-file \
 * Proxying of Routing Requests (SSR 7688)
 * Directions/Updates for Bloom
 
+## Limitations
+* Only proxies Bolt Websocket requests (Browser, Bloom, and other JS-based Browser applications).  It will not proxy TCP bolt connections from Python, Java, etc. drivers.
 
