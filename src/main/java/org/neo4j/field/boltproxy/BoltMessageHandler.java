@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.configuration.Configuration;
@@ -41,7 +40,7 @@ public class BoltMessageHandler {
         ctx = c;
         try {
             configs = cfg;
-            log.info("creating new backend connection");
+            log.debug("creating new backend connection");
             bp = new BoltBackend(new URI(configs.getString("boltproxy.backend.bolt","ws://localhost:7687")));
             bp.setHandler(this);
             boolean cc = bp.connectBlocking();
@@ -62,10 +61,10 @@ public class BoltMessageHandler {
     }
     
     public void sendMessage(byte[] b) {
-        log.info("preparing message to backend, connection open: " + bp.isOpen() + " -> " + Utils.byteArrayToHex(b));
+        log.info("Preparing message to backend: " + Utils.byteArrayToHex(b));
         byte[] lm = inspectMessage(b);
         if (lm != null) {
-            log.info("sending updated message to backend: " + Utils.byteArrayToHex(lm));
+            log.debug("Sending updated message to backend: " + Utils.byteArrayToHex(lm));
             bp.send(lm);
         } else {
             bp.send(b);
@@ -73,7 +72,8 @@ public class BoltMessageHandler {
     }
 
     public void processResponse(ByteBuffer b) {
-        log.info("sending message to client: " + Utils.byteArrayToHex(b.array()));
+        log.info("Preparing message to client: " + Utils.byteArrayToHex(b.array()));
+        inspectMessage(b.array());
         ctx.send(b);
     }
     
@@ -95,7 +95,7 @@ public class BoltMessageHandler {
         try {
             me.encode(nm, cp);
             byte[] p = Utils.prune(buffer.array());
-            log.info("new login::" + Utils.byteArrayToHex(p));
+            log.debug("new login::" + Utils.byteArrayToHex(p));
             return p;
         } catch (IOException ie) {
             log.error("error encoding new logon message");
@@ -104,22 +104,21 @@ public class BoltMessageHandler {
     }
 
     public byte[] inspectMessage(byte b[]) {
-        byte[] nb = Arrays.copyOfRange(b, 2, b.length);
-        String hex = Utils.byteArrayToHex(nb);
         boolean ret = false;
-        if (hex.startsWith("b017")) {
-            log.info("Skip inspection of protocol negotiation");
+        if ((b[0]==0x60 && b[1]==0x60 && b[2]==(byte)0xb0 && b[3]==0x17) || (b[0]==0x00 && b[1]==0x00)) {
+            log.info("Skip inspection of protocol negotiation frames");
         } else {
+            log.debug("New Inspection::" + Utils.byteArrayToHex(b));
             List<byte[]> bm = Utils.messages(b);
             for (int i = 0; i < bm.size(); i++) {
                 try {
-                    log.info("message::" + Utils.byteArrayToHex(bm.get(i)));
+                    log.debug("Message to process::" + Utils.byteArrayToHex(bm.get(i)));
                     ByteBuffer buffer = ByteBuffer.wrap(bm.get(i));
                     ValueUnpacker valueUnpacker = new DriverValueUnpacker(buffer);
                     Message message = MessageUnpacker.unpack(valueUnpacker);
                     LogRecord logRecord = new LogRecord(message, ctx.session.getRemoteAddress(), ctx.session.getLocalAddress());
                     String sr = Serializer.toJson(logRecord);
-                    log.info("Serial::" + sr);
+                    log.info("Message Processed::" + sr);
                     if (message.getName().equals("LOGON")) {
                         log.info("augmenting login with metadata");
                         byte[] updated = updateAuth(message);

@@ -10,6 +10,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.javalin.community.ssl.SslPlugin;
 
 // TODO
 // - SSL
@@ -27,11 +28,11 @@ public class ProxyApp {
             log.error("Can't load configuration file!");
             return;
         }
-        Javalin app = Javalin.create(config -> {
+        Javalin app = Javalin.create(config -> {            
             config.router.mount(router -> {
                 router.ws("/", ws -> {
                     ws.onConnect(ctx -> {
-                        log.info("connection with session:" + ctx.sessionId());
+                        log.debug("connection with session:" + ctx.sessionId());
                         BoltMessageHandler mh = new BoltMessageHandler(ctx, configs);
                         sessions.put(ctx.sessionId(), mh);
                     });
@@ -42,6 +43,7 @@ public class ProxyApp {
                         log.debug("received for session:" + ctx.sessionId() + "-> " + ctx.length() + " off: " + ctx.offset() + " data: " + Utils.byteArrayToHex(ctx.data()));
                         BoltMessageHandler mh = (BoltMessageHandler)sessions.getIfPresent(ctx.sessionId());
                         mh.setBinaryContext(ctx);
+                        log.info("send data sz::" + ctx.data().length);
                         mh.sendMessage(ctx.data());
                     });
                 });
@@ -52,6 +54,11 @@ public class ProxyApp {
                     ctx.json(j);
                 });
             });
+            
+            //config.plugins.register(new SslPlugin(ssl -> {
+                //... // your SSL configuration here
+            //    ssl.pemFromPath("/path/to/cert.pem", "/path/to/key.pem");
+            //}));
         }).start(configs.getInt("boltproxy.listener.port"));
     }
 }
