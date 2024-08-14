@@ -14,7 +14,7 @@
 
     <appender name="File" class="RollingFileAppender">
         <rollingPolicy class="SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>sample-app.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>/Users/garymann/Documents/sample-app.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxHistory>30</maxHistory>
             <maxFileSize>1MB</maxFileSize>
             <totalSizeCap>1GB</totalSizeCap>
@@ -24,8 +24,8 @@
         </encoder>
     </appender>
 
-    <root level="info">
+    <root level="DEBUG">
         <appender-ref ref="Console"/>
-        <!-- appender-ref ref="File"/ -->
+        <appender-ref ref="File"/>
     </root>
 </configuration>

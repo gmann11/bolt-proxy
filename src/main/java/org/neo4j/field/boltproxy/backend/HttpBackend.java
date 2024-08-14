@@ -1,4 +1,4 @@
-package org.neo4j.field.boltproxy;
+package org.neo4j.field.boltproxy.backend;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -33,6 +33,5 @@ public class HttpBackend {
             log.error("Error querying discovery endpoint!", e);
             return null;
         }
-    }
-    
+    } 
 }

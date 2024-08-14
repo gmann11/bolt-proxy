@@ -5,8 +5,16 @@ import java.util.LinkedList;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 
+/**
+ * TODO - replace byte/hex utils with java.util.HexFormat
+ * @author garymann
+ */
 public class Utils {
 
+    public static String byteToHex(byte a) {
+        return byteArrayToHex(new byte[] { a });
+    }
+    
     public static String byteArrayToHex(byte[] a) {
         StringBuilder sb = new StringBuilder(a.length * 2);
         for (byte b : a) {
@@ -75,6 +83,10 @@ public class Utils {
     
     public static byte[] len(short x) {
         return new byte[]{(byte)((x>>8)&0xFF),(byte)(x&0xFF)};
+    }
+    
+    public static short getlen(byte[] array) {
+        return (short)(((array[0] & 0xFF) << 8) | (array[1] & 0xFF));
     }
     
     // combine with len and eom marker

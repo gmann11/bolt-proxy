@@ -1,23 +1,17 @@
-package org.neo4j.field.boltproxy;
+package org.neo4j.field.boltproxy.handler;
 
-import io.javalin.websocket.WsBinaryMessageContext;
-import io.javalin.websocket.WsConnectContext;
 import io.netty.buffer.Unpooled;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.configuration.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.neo4j.bolt.json.Serializer;
+import org.neo4j.bolt.logger.LogRecord;
 import org.neo4j.bolt.message.Message;
 import org.neo4j.bolt.unpacker.MessageUnpacker;
 import org.neo4j.bolt.value.DriverValueUnpacker;
 import org.neo4j.bolt.value.ValueUnpacker;
-import org.neo4j.bolt.json.Serializer;
-import org.neo4j.bolt.logger.LogRecord;
 import org.neo4j.driver.Value;
 import static org.neo4j.driver.Values.value;
 import org.neo4j.driver.internal.messaging.common.CommonValuePacker;
@@ -25,56 +19,25 @@ import org.neo4j.driver.internal.messaging.encode.LogonMessageEncoder;
 import org.neo4j.driver.internal.messaging.request.LogonMessage;
 import org.neo4j.driver.internal.packstream.PackOutput;
 import org.neo4j.driver.internal.util.io.ByteBufOutput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.commons.configuration.Configuration;
+import org.neo4j.field.boltproxy.Utils;
 
-public class BoltMessageHandler {
-    private static Logger log = LoggerFactory.getLogger(BoltMessageHandler.class);
-    private WsBinaryMessageContext bctx = null;
-    private WsConnectContext ctx = null;
-    private BoltBackend bp = null;
-    private Configuration configs = null;
+public abstract class MessageHandler {
+    protected  Logger log = LoggerFactory.getLogger(MessageHandler.class);
+    protected Configuration configs;
+    SocketAddress localAddress;
+    SocketAddress remoteAddress;
     
-    public BoltMessageHandler(WsBinaryMessageContext c) {
-        bctx = c;   
+    public MessageHandler(Configuration cfg) {
+        configs = cfg;
     }
-    public BoltMessageHandler(WsConnectContext c, Configuration cfg) {
-        ctx = c;
-        try {
-            configs = cfg;
-            log.debug("creating new backend connection");
-            bp = new BoltBackend(new URI(configs.getString("boltproxy.backend.bolt","ws://localhost:7687")));
-            bp.setHandler(this);
-            boolean cc = bp.connectBlocking();
-            log.info("connected to backend: " + cc);
-        } catch (URISyntaxException e) {
-            log.error("Exception on URI! ", e);
-        } catch (InterruptedException ie) {
-            log.error("Interrupted while connecting! ", ie);
-        }
-    }
+    
+    public abstract void processResponse(ByteBuffer b);
     
     public void setConfigs(Configuration c) {
         configs = c;
-    }
-    
-    public void setBinaryContext(WsBinaryMessageContext c) {
-        bctx = c;
-    }
-    
-    public void sendMessage(byte[] b) {
-        log.info("Preparing message to backend: " + Utils.byteArrayToHex(b));
-        byte[] lm = inspectMessage(b);
-        if (lm != null) {
-            log.debug("Sending updated message to backend: " + Utils.byteArrayToHex(lm));
-            bp.send(lm);
-        } else {
-            bp.send(b);
-        }
-    }
-
-    public void processResponse(ByteBuffer b) {
-        log.info("Preparing message to client: " + Utils.byteArrayToHex(b.array()));
-        inspectMessage(b.array());
-        ctx.send(b);
     }
     
     /**
@@ -116,7 +79,9 @@ public class BoltMessageHandler {
                     ByteBuffer buffer = ByteBuffer.wrap(bm.get(i));
                     ValueUnpacker valueUnpacker = new DriverValueUnpacker(buffer);
                     Message message = MessageUnpacker.unpack(valueUnpacker);
-                    LogRecord logRecord = new LogRecord(message, ctx.session.getRemoteAddress(), ctx.session.getLocalAddress());
+                    log.debug("Message IN Process::" + message + "::" + remoteAddress + "::" + localAddress);
+                    LogRecord logRecord = new LogRecord(message, remoteAddress, localAddress);
+                    log.debug("Log Record IN Process::" + logRecord);
                     String sr = Serializer.toJson(logRecord);
                     log.info("Message Processed::" + sr);
                     if (message.getName().equals("LOGON")) {
@@ -135,5 +100,5 @@ public class BoltMessageHandler {
             }
         }
         return null;
-    }
+    }   
 }

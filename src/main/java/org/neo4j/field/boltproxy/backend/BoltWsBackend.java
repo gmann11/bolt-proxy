@@ -1,4 +1,4 @@
-package org.neo4j.field.boltproxy;
+package org.neo4j.field.boltproxy.backend;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -6,22 +6,23 @@ import java.util.Map;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft;
 import org.java_websocket.handshake.ServerHandshake;
+import org.neo4j.field.boltproxy.handler.BoltWsMessageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class BoltBackend extends WebSocketClient {
-    private static Logger log = LoggerFactory.getLogger(BoltBackend.class);
-    BoltMessageHandler bh = null;
+public class BoltWsBackend extends WebSocketClient {
+    private static Logger log = LoggerFactory.getLogger(BoltWsBackend.class);
+    BoltWsMessageHandler bh = null;
 
-    public BoltBackend(URI serverUri, Draft draft) {
+    public BoltWsBackend(URI serverUri, Draft draft) {
         super(serverUri, draft);
     }
 
-    public BoltBackend(URI serverURI) {
+    public BoltWsBackend(URI serverURI) {
         super(serverURI);
     }
 
-    public BoltBackend(URI serverUri, Map<String, String> httpHeaders) {
+    public BoltWsBackend(URI serverUri, Map<String, String> httpHeaders) {
         super(serverUri, httpHeaders);
     }
 
@@ -51,7 +52,7 @@ public class BoltBackend extends WebSocketClient {
         log.error("error on backend: " + ex);
     }
 
-    public void setHandler(BoltMessageHandler h) {
+    public void setHandler(BoltWsMessageHandler h) {
         bh = h;
     }
 }
